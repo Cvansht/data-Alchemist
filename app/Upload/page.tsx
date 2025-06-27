@@ -1,47 +1,71 @@
 "use client";
+
 import { useState } from "react";
 import FileUploader from "../components/FileUploader";
 import DataGrid from "../components/DataGrid";
+import RuleInputSection from "../components/RuleInputSection";
 import { ColumnDef } from "@tanstack/react-table";
 import { validateClients } from "@/lib/validators";
-import RuleInputSection from "../components/RuleInputSection";
+import { ValidationError } from "../types/validationTypes";
 import { Rule } from "@/lib/rulesTypes";
-import { suggestRulesFromClients } from "@/lib/aiSuggest";
 import { Button } from "@/components/ui/button";
 
 export default function UploadPage() {
   const [datasets, setDatasets] = useState<Record<string, any[]>>({});
-  const [validationErrors, setValidationErrors] = useState([]);
+  const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
-  const [ruleSuggestions, setRuleSuggestions] = useState<Rule[]>([]);
 
-  const addRule = (rule: Rule) => {
-    setRules(prev => [...prev, rule]);
+  // 🔁 Step 1: handle parsing of uploaded file
+  const handleDataParsed = (type: string, data: any[]) => {
+    setDatasets((prev) => ({ ...prev, [type]: data }));
+
+    let errors: ValidationError[] = [];
+    if (type === "clients") {
+      errors = validateClients(data);
+      console.log("Validation errors:", errors);
+    }
+
+    setValidationErrors((prev) => [
+      ...prev.filter((e) => e.entity !== type),
+      ...errors,
+    ]);
   };
 
-  const handleDataParsed = (type: string, data: any[]) => {
-    setDatasets(prev => ({ ...prev, [type]: data }));
+  // ✏️ Step 2: handle inline-edited data update
+  const handleDataUpdate = (type: string, updatedData: any[]) => {
+    setDatasets((prev) => ({ ...prev, [type]: updatedData }));
 
     if (type === "clients") {
-      setValidationErrors(validateClients(data));
-      setRuleSuggestions(suggestRulesFromClients(data));
+      const errors = validateClients(updatedData);
+      setValidationErrors((prev) => [
+        ...prev.filter((e) => e.entity !== type),
+        ...errors,
+      ]);
     }
   };
 
-  const exportRules = () => {
-    const blob = new Blob([JSON.stringify(rules, null, 2)], { type: "application/json" });
+  const addRule = (rule: Rule) => {
+    setRules((prev) => [...prev, rule]);
+  };
+
+  // 📤 Step 3: Download helpers
+  const downloadJSON = (data: any, filename: string) => {
+    const blob = new Blob([JSON.stringify(data, null, 2)], {
+      type: "application/json",
+    });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "rules.json";
-    a.click();
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   const renderGrid = (label: string, data: any[]) => {
-    const columns: ColumnDef<any>[] = Object.keys(data[0] || {}).map(key => ({
+    const columns: ColumnDef<any>[] = Object.keys(data[0] || {}).map((key) => ({
       accessorKey: key,
       header: key,
-      cell: info => info.getValue(),
+      cell: (info) => info.getValue(),
     }));
 
     return (
@@ -50,8 +74,9 @@ export default function UploadPage() {
         <DataGrid
           data={data}
           columns={columns}
-          entity={label as any}
+          entity={label as "clients" | "workers" | "tasks"}
           errors={validationErrors}
+          onDataUpdate={(updated : any) => handleDataUpdate(label, updated)}
         />
       </div>
     );
@@ -59,34 +84,84 @@ export default function UploadPage() {
 
   return (
     <main className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Data Alchemist</h1>
+      <h1 className="text-2xl font-bold mb-4">
+        Upload Clients, Workers, and Tasks
+      </h1>
+
+      {/* File upload */}
       <FileUploader onDataParsed={handleDataParsed} />
 
-      {ruleSuggestions.length > 0 && (
-        <div className="mt-6 border p-4 rounded bg-blue-50">
-          <h2 className="font-semibold mb-2">AI Rule Suggestions:</h2>
-          {ruleSuggestions.map((sug, i) => (
-            <div key={i} className="border p-2 rounded bg-white mb-2">
-              <pre>{JSON.stringify(sug, null, 2)}</pre>
-              <button onClick={() => addRule(sug)} className="mt-1 text-sm underline text-blue-600">
-                Apply
-              </button>
+      {/* Display DataGrids */}
+      <div className="mt-6">
+        {Object.entries(datasets).map(([key, data]) =>
+          renderGrid(key, data)
+        )}
+      </div>
+
+      {/* Validation errors and rule creation */}
+      {validationErrors.length > 0 && (
+        <div className="mt-4 border p-4 rounded bg-yellow-50">
+          <h2 className="font-semibold mb-2">Validation Summary:</h2>
+          <ul className="list-disc ml-5 space-y-1 text-sm">
+            {validationErrors.map((err, i) => (
+              <li key={i}>
+                <strong>{err.entity}</strong> [Row {err.rowIndex + 1}, Field:{" "}
+                {err.field}] - {err.message}
+              </li>
+            ))}
+          </ul>
+
+          {/* Rule section */}
+          <RuleInputSection onAddRule={addRule} />
+
+          {/* Show saved rules */}
+          {rules.length > 0 && (
+            <div className="mt-6 border p-4 rounded bg-blue-50">
+              <h2 className="font-semibold mb-2">Defined Rules:</h2>
+              <ul className="list-disc ml-5 text-sm space-y-1">
+                {rules.map((rule, i) => (
+                  <li key={i}>
+                    <code>{JSON.stringify(rule)}</code>
+                  </li>
+                ))}
+              </ul>
+              <Button
+                onClick={() => downloadJSON(rules, "rules.json")}
+                className="mt-4 bg-blue-600 hover:bg-blue-700 text-white"
+              >
+                Export Rules
+              </Button>
             </div>
-          ))}
+          )}
         </div>
       )}
 
-      {Object.entries(datasets).map(([k, d]) => renderGrid(k, d))}
+      {/* Export cleaned datasets */}
+      {Object.entries(datasets).length > 0 && (
+        <div className="mt-6">
+          <h2 className="text-lg font-semibold mb-2">Export Cleaned Data</h2>
+          <div className="flex gap-4 flex-wrap">
+            {Object.entries(datasets).map(([type, data]) => (
+              <Button
+                key={type}
+                onClick={() => downloadJSON(data, `${type}_cleaned.json`)}
+                className="bg-green-600 hover:bg-green-700 text-white"
+              >
+                Export {type.charAt(0).toUpperCase() + type.slice(1)}
+              </Button>
+            ))}
 
-      <RuleInputSection onAddRule={addRule} />
-
-      {rules.length > 0 && (
-        <div className="mt-6 border p-4 rounded bg-blue-50">
-          <h2 className="font-semibold mb-2">Defined Rules:</h2>
-          {rules.map((r, i) => (
-            <pre key={i}>{JSON.stringify(r, null, 2)}</pre>
-          ))}
-          <Button onClick={exportRules}>Export Rules Config</Button>
+            {validationErrors.length > 0 && (
+              <Button
+                onClick={() =>
+                  downloadJSON(validationErrors, "validation_errors.json")
+                }
+                className="bg-yellow-600 hover:bg-yellow-700 text-white"
+              >
+                Export Validation Errors
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </main>

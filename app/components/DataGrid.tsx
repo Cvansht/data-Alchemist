@@ -1,5 +1,5 @@
 "use client";
-
+import React from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -10,6 +10,13 @@ import { useState } from "react";
 import { ValidationError } from "../types/validationTypes";
 import { Button } from "@/components/ui/button";
 
+// Add types
+type PrioritizationWeights = {
+  priorityLevel: number;
+  taskFulfillment: number;
+  fairness: number;
+};
+
 type DataGridProps = {
   data: any[];
   columns: ColumnDef<any>[];
@@ -17,6 +24,10 @@ type DataGridProps = {
   errors: ValidationError[];
   onDataUpdate?: (updatedData: any[]) => void;
   setValidationErrors?: (errors: ValidationError[]) => void;
+  prioritization?: PrioritizationWeights;
+  setPrioritization?: (weights: PrioritizationWeights) => void;
+  searchQuery?: string;
+  parsedFilters?: { field: string; op: string; value: any }[];
 };
 
 export default function DataGrid<T>({
@@ -26,25 +37,101 @@ export default function DataGrid<T>({
   entity,
   onDataUpdate,
   setValidationErrors,
-}:
-//@ts-ignore
- DataGridProps<T>) {
+  prioritization,
+  setPrioritization,
+  searchQuery = "",
+  parsedFilters = [],
+}: DataGridProps<T>) {
   const [tableData, setTableData] = useState<T[]>(data);
   const [editingRow, setEditingRow] = useState<number | null>(null);
   const [editedRow, setEditedRow] = useState<any>({});
   const [presetValue, setPresetValue] = useState("");
   const [filterPriority, setFilterPriority] = useState<number | null>(null);
 
-  const filteredData = filterPriority
-    ? tableData.filter((row: any) => row.PriorityLevel >= filterPriority)
-    : tableData;
+  const conditions = React.useMemo(() => {
+    return (searchQuery || "")
+      .split(/\s+AND\s+/i)
+      .map((clause: any) => {
+        const m = clause.match(/(\w+)\s*(>=|<=|=|>|<)\s*(.+)/);
+        if (!m) return null;
+        const [, field, op, raw] = m;
+        const value = isNaN(Number(raw)) ? raw.trim() : Number(raw);
+        return { field, op, value } as {
+          field: string;
+          op: string;
+          value: string | number;
+        };
+      })
+      .filter(Boolean) as { field: string; op: string; value: any }[];
+  }, [searchQuery]);
+
+  // apply filter on tableData
+  const filteredData = React.useMemo(() => {
+    if (!parsedFilters.length) return tableData;
+    return tableData.filter((row: any) =>
+      parsedFilters.every(({ field, op, value }) => {
+        const cv = row[field];
+        if (cv == null) return false;
+        const num = Number(cv);
+        switch (op) {
+          case ">":
+            return num > value;
+          case "<":
+            return num < value;
+          case ">=":
+            return num >= value;
+          case "<=":
+            return num <= value;
+          case "=":
+            return cv.toString() === value.toString();
+          default:
+            return false;
+        }
+      })
+    );
+  }, [tableData, parsedFilters]);
+  const handleSuggestFix = async (rowData: any, rowIndex: number) => {
+    const rowErrors = errors.filter((e) => e.rowIndex === rowIndex && e.entity === entity);
+  
+    const res = await fetch("/api/suggest-fix", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ row: rowData, entity, errors: rowErrors }),
+    });
+  
+    const { fixed } = await res.json();
+  
+    const updated = [...tableData];
+    updated[rowIndex] = fixed;
+    setTableData(updated);
+  
+    if (onDataUpdate) onDataUpdate(updated);
+  
+    // Re-validate after fix
+    if (entity === "clients" && setValidationErrors) {
+      const { validateClients } = require("@/lib/validators");
+      const newErrors = validateClients(updated);
+      setValidationErrors((prev: ValidationError[]) => [
+        ...prev.filter((e) => e.entity !== "clients"),
+        ...newErrors,
+      ]);
+    }
+  
+    // Optionally notify
+    alert("Fix applied!");
+  };
+  
+
+
+
 
   const table = useReactTable({
     data: filteredData,
-    columns: columns.map((col : any) => ({
+    columns: columns.map((col) => ({
       ...col,
       cell: (info: any) => {
         const rowIndex = info.row.index;
+
         const value = info.getValue();
         const field = info.column.id;
 
@@ -82,6 +169,7 @@ export default function DataGrid<T>({
         return <span>{value}</span>;
       },
     })),
+
     getCoreRowModel: getCoreRowModel(),
   });
 
@@ -126,28 +214,60 @@ export default function DataGrid<T>({
   return (
     <div className="overflow-x-auto border rounded-md p-2 mt-4">
       {entity === "clients" && (
-        <div className="mb-4 flex items-center gap-2">
-          <label className="text-sm">Min Priority:</label>
-          <input
-            type="number"
-            min={1}
-            max={10}
-            value={filterPriority ?? ""}
-            onChange={(e) =>
-              setFilterPriority(
-                e.target.value === "" ? null : Number(e.target.value)
-              )
-            }
-            className="border px-2 py-1 rounded text-sm w-20"
-          />
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setFilterPriority(null)}
-          >
-            Reset
-          </Button>
-        </div>
+        <>
+          <div className="mb-4 flex items-center gap-2">
+            <label className="text-sm">Min Priority:</label>
+            <input
+              type="number"
+              min={1}
+              max={10}
+              value={filterPriority ?? ""}
+              onChange={(e) =>
+                setFilterPriority(
+                  e.target.value === "" ? null : Number(e.target.value)
+                )
+              }
+              className="border px-2 py-1 rounded text-sm w-20"
+            />
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setFilterPriority(null)}
+            >
+              Reset
+            </Button>
+          </div>
+
+          {setPrioritization && (
+            <div className="mb-4 border p-4 rounded bg-gray-50">
+              <h3 className="text-sm font-semibold mb-2">
+                Prioritization Weights
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
+                {Object.entries(prioritization || {}).map(([key, val]) => (
+                  <div key={key} className="flex flex-col gap-1">
+                    <label>{key}</label>
+                    <input
+                      type="range"
+                      min={0}
+                      max={10}
+                      value={val}
+                      onChange={(e) =>
+                        setPrioritization({
+                          ...(prioritization || {}),
+                          [key]: Number(e.target.value),
+                        })
+                      }
+                    />
+                    <span className="text-center text-xs text-gray-500">
+                      {val}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
 
       <table className="w-full text-sm">
@@ -156,7 +276,10 @@ export default function DataGrid<T>({
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <th className="border px-2 py-1 bg-gray-100" key={header.id}>
-                  {flexRender(header.column.columnDef.header, header.getContext())}
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
                 </th>
               ))}
               <th className="border px-2 py-1 bg-gray-100">Actions</th>
@@ -169,7 +292,7 @@ export default function DataGrid<T>({
               {row.getVisibleCells().map((cell) => {
                 const field = cell.column.id;
                 const hasError = errors.some(
-                  (e:any) =>
+                  (e) =>
                     e.entity === entity &&
                     e.rowIndex === row.index &&
                     e.field === field
@@ -222,6 +345,17 @@ export default function DataGrid<T>({
                     }}
                   >
                     Edit
+                  </Button>
+                )}
+                {errors.some(
+                  (e) => e.rowIndex === row.index && e.entity === entity
+                ) && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleSuggestFix(row.original, row.index)}
+                  >
+                    Suggest Fix
                   </Button>
                 )}
               </td>

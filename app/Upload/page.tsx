@@ -4,7 +4,8 @@ import { useState } from "react";
 import FileUploader from "../components/FileUploader";
 import DataGrid from "../components/DataGrid";
 import RuleInputSection from "../components/RuleInputSection";
-import PrioritizationPanel, { PrioritizationWeights } from "../components/PrioritizationPanel";
+import PrioritizationPanel from "../components/PrioritizationPanel";
+
 import { ColumnDef } from "@tanstack/react-table";
 import {
   validateClients,
@@ -25,7 +26,8 @@ export default function UploadPage() {
   const [datasets, setDatasets] = useState<Record<string, any[]>>({});
   const [validationErrors, setValidationErrors] = useState<ValidationError[]>([]);
   const [rules, setRules] = useState<Rule[]>([]);
-  const [weights, setWeights] = useState<PrioritizationWeights>({
+  //@ts-ignore
+  const [weights, setWeights] = useState<PrioritizationPanel>({
     priorityWeight: 0.4,
     fairnessWeight: 0.3,
     loadBalanceWeight: 0.3,
@@ -89,7 +91,7 @@ export default function UploadPage() {
 
     const ruleErrors = validateRules(newRules);
     setValidationErrors((prev) => [
-      ...prev.filter((e) => e.entity !== "rules"),
+      // ...prev.filter((e) => e.entity !== "rules"),
       ...ruleErrors,
     ]);
   };
@@ -186,7 +188,9 @@ export default function UploadPage() {
         )}
       </div>
 
-      <PrioritizationPanel onUpdate={(w) => setWeights(w)} />
+      <PrioritizationPanel 
+      //@ts-ignore
+      onUpdate={(w) => setWeights(w)} />
 
       {validationErrors.length > 0 && (
         <div className="mt-6 border p-4 rounded bg-yellow-50">

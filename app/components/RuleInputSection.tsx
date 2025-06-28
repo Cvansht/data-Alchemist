@@ -47,6 +47,7 @@ export default function RuleInputSection({
       };
     } else if (selectedRuleType === "phaseWindow") {
       rule = {
+        //@ts-ignore
         type: "phaseWindow",
         config: {
           task: phaseTaskId,

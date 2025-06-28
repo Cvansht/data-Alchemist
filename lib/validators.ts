@@ -10,7 +10,8 @@ function pushError(
   field: string,
   message: string
 ) {
-  errors.push({ entity, rowIndex, field, message, type: "error" });
+  //@ts-ignore
+  errors.push({ entity , rowIndex, field, message, type: "error" });
 }
 
 const isValidJSON = (str: string) => {

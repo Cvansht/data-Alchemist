@@ -73,7 +73,15 @@ Return ONLY the JSON output. Do NOT include any extra commentary, markdown forma
       parsedResult = [];
     }
 
-    return NextResponse.json(parsedResult);
+    if (
+      parsedResult.length === 1 &&
+      parsedResult[0].type &&
+      parsedResult[0].config
+    ) {
+      return NextResponse.json({ rule: parsedResult[0] });
+    }
+    
+    return NextResponse.json({ rule: null });
   } catch (error) {
     console.error("Parse Rule API Error (Gemini):", error);
     return NextResponse.json(

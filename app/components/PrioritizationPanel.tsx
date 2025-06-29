@@ -1,96 +1,86 @@
 "use client";
 
 import { useState } from "react";
+import { Gauge, Scale, SlidersHorizontal } from "lucide-react";
 
-type Props = {
-  onChange: (weights: Record<string, number>) => void;
-};
+// Updated to match your preferred dark UI theme
 
-export default function PrioritizationPanel({ onChange }: Props) {
+export default function PrioritizationPanel({ onChange }: { onChange: (weights: Record<string, number>) => void }) {
   const [weights, setWeights] = useState({
-    priority: 5,
-    fairness: 5,
-    load: 5,
+    priority: 4,
+    fairness: 3,
+    load: 3,
   });
 
-  const handleChange = (field: string, value: number) => {
-    const updated = { ...weights, [field]: value };
+  const total = weights.priority + weights.fairness + weights.load;
+
+  const handleChange = (key: string, value: number) => {
+    const updated = { ...weights, [key]: value };
     setWeights(updated);
     onChange(updated);
   };
 
-  const applyPreset = (preset: "fulfillment" | "fair" | "load") => {
-    let newWeights = { priority: 5, fairness: 5, load: 5 };
-    if (preset === "fulfillment") newWeights = { priority: 10, fairness: 2, load: 1 };
-    if (preset === "fair") newWeights = { priority: 5, fairness: 10, load: 5 };
-    if (preset === "load") newWeights = { priority: 2, fairness: 2, load: 10 };
-    setWeights(newWeights);
-    onChange(newWeights);
-  };
-
   return (
-    <div className="mt-6 border rounded p-4 bg-white">
-      <h3 className="text-md font-semibold mb-2">⚖️ Prioritization Settings</h3>
+    <div className="mt-6 bg-slate-900 border border-slate-700 rounded-lg p-6 text-white shadow-sm">
+      <h3 className="text-lg font-semibold mb-4 text-purple-300 flex items-center gap-2">
+        <SlidersHorizontal size={18} /> Prioritization Settings
+      </h3>
 
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1">PriorityWeight: {weights.priority}</label>
-          <input
-            type="range"
-            min={0}
-            max={10}
-            value={weights.priority}
-            onChange={(e) => handleChange("priority", parseInt(e.target.value))}
-            className="w-full"
-          />
+      <div className="bg-slate-800 border border-slate-600 p-4 rounded-md">
+        <div className="flex justify-between items-center mb-4">
+          <h4 className="text-md font-semibold text-white flex items-center gap-2">
+            <SlidersHorizontal size={16} /> Weight Configuration
+          </h4>
+          <span className="text-xs text-slate-400 bg-slate-700 px-2 py-1 rounded-full">
+            Total: {(total * 10).toFixed(1)}%
+          </span>
         </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">FairnessWeight: {weights.fairness}</label>
-          <input
-            type="range"
-            min={0}
-            max={10}
-            value={weights.fairness}
-            onChange={(e) => handleChange("fairness", parseInt(e.target.value))}
-            className="w-full"
-          />
-        </div>
+        <div className="space-y-6">
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-red-400">
+              <Gauge size={14} /> Priority Weight
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={10}
+              value={weights.priority}
+              onChange={(e) => handleChange("priority", parseInt(e.target.value))}
+              className="w-full accent-red-500"
+            />
+            <div className="text-right text-xs text-slate-400">{(weights.priority * 10).toFixed(1)}%</div>
+          </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">LoadBalanceWeight: {weights.load}</label>
-          <input
-            type="range"
-            min={0}
-            max={10}
-            value={weights.load}
-            onChange={(e) => handleChange("load", parseInt(e.target.value))}
-            className="w-full"
-          />
-        </div>
-      </div>
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-green-400">
+              <Scale size={14} /> Fairness Weight
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={10}
+              value={weights.fairness}
+              onChange={(e) => handleChange("fairness", parseInt(e.target.value))}
+              className="w-full accent-green-500"
+            />
+            <div className="text-right text-xs text-slate-400">{(weights.fairness * 10).toFixed(1)}%</div>
+          </div>
 
-      <div className="mt-4">
-        <p className="font-medium text-sm mb-2">Preset:</p>
-        <div className="flex gap-2 flex-wrap">
-          <button
-            onClick={() => applyPreset("fulfillment")}
-            className="border rounded px-2 py-1 text-sm hover:bg-gray-100"
-          >
-            Maximize Fulfillment
-          </button>
-          <button
-            onClick={() => applyPreset("fair")}
-            className="border rounded px-2 py-1 text-sm hover:bg-gray-100"
-          >
-            Fair Distribution
-          </button>
-          <button
-            onClick={() => applyPreset("load")}
-            className="border rounded px-2 py-1 text-sm hover:bg-gray-100"
-          >
-            Minimize Workload
-          </button>
+          <div>
+            <label className="flex items-center gap-2 text-sm font-medium text-blue-400">
+              <Scale size={14} /> Load Balance Weight
+            </label>
+            <input
+              type="range"
+              min={0}
+              max={10}
+              value={weights.load}
+              onChange={(e) => handleChange("load", parseInt(e.target.value))}
+              className="w-full accent-blue-500"
+            />
+            <div className="text-right text-xs text-slate-400">{(weights.load * 10).toFixed(1)}%</div>
+          </div>
         </div>
       </div>
     </div>

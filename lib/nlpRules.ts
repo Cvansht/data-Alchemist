@@ -11,7 +11,7 @@ export async function parseNaturalRule(input: string): Promise<Rule | null> {
     });
 
     if (!res.ok) {
-      throw new Error("Failed to call OpenAI API route");
+      throw new Error("Failed to call GEMINI API route");
     }
 
     const data = await res.json();

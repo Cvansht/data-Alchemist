@@ -3,70 +3,79 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 
-// Initialize Gemini, explicitly passing the env var
+// Init Gemini client
 const ai = new GoogleGenAI({
   apiKey: process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY!,
 });
 
-// Ensure the API key is present
 if (!process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
-  console.error("⚠️ No Gemini API key found. Please set GEMINI_API_KEY or GOOGLE_API_KEY in your .env.local file.");
+  console.error("⚠️ Gemini API key missing. Set GEMINI_API_KEY or GOOGLE_API_KEY in .env.local.");
 }
 
-console.log("my controller is here");
+const ENTITY_SCHEMAS: Record<string, string[]> = {
+  clients: ["ClientID", "ClientName", "PriorityLevel", "RequestedTaskIDs", "GroupTag", "AttributesJSON"],
+  workers: ["WorkerID", "WorkerName", "Skills", "AvailableSlots", "MaxLoadPerPhase", "WorkerGroup", "QualificationLevel"],
+  tasks: ["TaskID", "TaskName", "Category", "Duration", "RequiredSkills", "PreferredPhases", "MaxConcurrent"],
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const { headers, entity } = await req.json();
+    const { headers, sampleRow, entity } = await req.json();
 
-    if (!headers || !Array.isArray(headers) || headers.length === 0) {
-      return NextResponse.json(
-        { error: "Missing or invalid 'headers' in request body." },
-        { status: 400 }
-      );
+    if (!Array.isArray(headers) || !headers.length) {
+      return NextResponse.json({ error: "Missing or invalid 'headers'" }, { status: 400 });
     }
-    if (!entity || typeof entity !== 'string') {
-      return NextResponse.json(
-        { error: "Missing or invalid 'entity' in request body." },
-        { status: 400 }
-      );
+
+    if (!entity || typeof entity !== "string" || !ENTITY_SCHEMAS[entity]) {
+      return NextResponse.json({ error: "Invalid or missing entity type" }, { status: 400 });
     }
+
+    const schemaFields = ENTITY_SCHEMAS[entity];
 
     const prompt = `
-You are an intelligent header remapper. Given a list of column headers from a CSV or XLSX file and an expected schema for "${entity}", map each header to the most likely canonical field name.
+You are a smart CSV column remapper. The user uploaded a file with the following column headers:
 
-Return ONLY a valid JSON array of canonical field names in correct order, e.g.:
+${JSON.stringify(headers)}
+
+The expected schema for entity type "${entity}" is:
+${JSON.stringify(schemaFields)}
+
+Additionally, here’s a sample data row from the uploaded file:
+${sampleRow ? JSON.stringify(sampleRow) : "(not provided)"}
+
+Your task is to remap the uploaded headers to the most likely canonical fields (from the schema), based on header names and sample row values.
+
+Return ONLY a JSON array like:
 ["ClientID", "PriorityLevel", "RequestedTaskIDs", ...]
-Do not include explanations or code formatting like markdown.
 
-Original headers: ${JSON.stringify(headers)}
+⚠️ Do NOT return explanations or markdown formatting.
 `;
 
-    const response = await ai.models.generateContent({
+    const res = await ai.models.generateContent({
       model: "gemini-1.5-flash",
       contents: prompt,
     });
 
-    const rawText = response.candidates?.[0]?.content?.parts?.[0]?.text || "";
-    const cleanText = rawText.replace(/```json|```/g, "").trim();
+    const raw = res.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+    const clean = raw.replace(/```json|```/g, "").trim();
 
-    let mappedHeaders: string[] = headers;
+    let mappedHeaders = headers;
     try {
-      const parsed = JSON.parse(cleanText);
-      if (Array.isArray(parsed) && parsed.every((item: any) => typeof item === 'string')) {
+      const parsed = JSON.parse(clean);
+      if (Array.isArray(parsed) && parsed.every((h) => typeof h === "string")) {
         mappedHeaders = parsed;
       } else {
-        console.warn("Gemini returned a malformed JSON array or unexpected structure. Falling back to original headers.", parsed);
+        console.warn("⚠️ Unexpected Gemini structure. Using original headers.");
       }
-    } catch (parseError) {
-      console.error("Failed to parse Gemini response as JSON:", parseError);
+    } catch (err) {
+      console.warn("⚠️ Gemini JSON parsing failed. Using fallback headers.");
     }
 
     return NextResponse.json({ mappedHeaders });
   } catch (err) {
-    console.error("Header Mapping Error (Gemini):", err);
+    console.error("Header Mapping Error:", err);
     return NextResponse.json(
-      { mappedHeaders: [], error: "Failed to map headers." },
+      { mappedHeaders: [], error: "Internal error in header mapping." },
       { status: 500 }
     );
   }

@@ -90,10 +90,7 @@ export default function UploadPage() {
     setRules(newRules);
 
     const ruleErrors = validateRules(newRules);
-    setValidationErrors((prev) => [
-      // ...prev.filter((e) => e.entity !== "rules"),
-      ...ruleErrors,
-    ]);
+    setValidationErrors((prev) => [...ruleErrors]);
   };
 
   const handleAISuggestRules = async () => {
@@ -152,14 +149,14 @@ export default function UploadPage() {
 
     return (
       <div key={label} className="mb-8">
-        <h2 className="text-lg font-semibold mb-2 capitalize">{label}</h2>
+        <h2 className="text-xl font-semibold text-white mb-2 capitalize">{label}</h2>
         <input
           type="text"
           placeholder="Filter (e.g. PriorityLevel > 3)"
           value={searchQueries[label] ?? ""}
           onChange={(e) => updateSearch(label, e.target.value)}
           onBlur={(e) => handleNLSearch(e.target.value)}
-          className="border rounded px-2 py-1 mb-4 w-full"
+          className="border border-slate-600 bg-slate-900 text-white rounded px-2 py-1 mb-4 w-full"
         />
 
         <DataGrid
@@ -175,8 +172,8 @@ export default function UploadPage() {
   };
 
   return (
-    <main className="p-6">
-      <h1 className="text-2xl font-bold mb-4">
+    <main className="p-6 bg-[#0f172a] min-h-screen text-white">
+      <h1 className="text-3xl font-bold mb-4 text-blue-400">
         Upload Clients, Workers, and Tasks
       </h1>
 
@@ -188,13 +185,14 @@ export default function UploadPage() {
         )}
       </div>
 
-      <PrioritizationPanel 
-      //@ts-ignore
-      onUpdate={(w) => setWeights(w)} />
+      <PrioritizationPanel
+        //@ts-ignore
+        onUpdate={(w) => setWeights(w)}
+      />
 
       {validationErrors.length > 0 && (
-        <div className="mt-6 border p-4 rounded bg-yellow-50">
-          <h2 className="font-semibold mb-2">Validation Summary:</h2>
+        <div className="mt-6 border border-yellow-700 p-4 rounded bg-yellow-900/30">
+          <h2 className="font-semibold mb-2 text-yellow-400">Validation Summary:</h2>
           <ul className="list-disc ml-5 space-y-1 text-sm">
             {validationErrors.map((err, i) => (
               <li key={i}>
@@ -213,8 +211,8 @@ export default function UploadPage() {
           </Button>
 
           {rules.length > 0 && (
-            <div className="mt-6 border p-4 rounded bg-blue-50">
-              <h2 className="font-semibold mb-2">Defined Rules:</h2>
+            <div className="mt-6 border border-blue-700 p-4 rounded bg-blue-900/30">
+              <h2 className="font-semibold mb-2 text-blue-400">Defined Rules:</h2>
               <ul className="list-disc ml-5 text-sm space-y-1">
                 {rules.map((rule, i) => (
                   <li key={i}>

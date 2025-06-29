@@ -51,9 +51,7 @@ export default function RuleInputSection({
         type: "phaseWindow",
         config: {
           task: phaseTaskId,
-          allowedPhases: allowedPhases
-            .split(",")
-            .map((p) => Number(p.trim())),
+          allowedPhases: allowedPhases.split(",").map((p) => Number(p.trim())),
         },
       };
     } else {
@@ -86,13 +84,15 @@ export default function RuleInputSection({
   };
 
   return (
-    <div className="mt-8 border rounded p-4 space-y-4 bg-white">
-      <h2 className="font-semibold text-lg">Add Rule</h2>
+    <div className="mt-8 border border-slate-700 rounded p-6 space-y-4 bg-slate-900 text-white">
+      <h2 className="font-semibold text-xl text-purple-400 flex items-center gap-2">
+        🧠 Add Rule
+      </h2>
 
       <div className="space-y-2">
-        <label className="block font-medium">Rule Type:</label>
+        <label className="block text-sm text-slate-300 font-medium">Rule Type:</label>
         <select
-          className="border rounded p-1"
+          className="border border-slate-700 bg-slate-800 text-white rounded p-2 w-full"
           value={selectedRuleType}
           onChange={(e) => setSelectedRuleType(e.target.value)}
         >
@@ -105,9 +105,9 @@ export default function RuleInputSection({
 
       {selectedRuleType === "coRun" && (
         <div className="space-y-2">
-          <label className="block font-medium">Task IDs (comma separated):</label>
+          <label className="block text-sm font-medium text-slate-300">Task IDs (comma separated):</label>
           <input
-            className="border rounded p-1 w-full"
+            className="border border-slate-700 bg-slate-800 text-white rounded p-2 w-full"
             value={taskIds}
             onChange={(e) => setTaskIds(e.target.value)}
           />
@@ -116,9 +116,9 @@ export default function RuleInputSection({
 
       {(selectedRuleType === "slotRestriction" || selectedRuleType === "loadLimit") && (
         <div className="space-y-2">
-          <label className="block font-medium">Group Tag:</label>
+          <label className="block text-sm font-medium text-slate-300">Group Tag:</label>
           <input
-            className="border rounded p-1 w-full"
+            className="border border-slate-700 bg-slate-800 text-white rounded p-2 w-full"
             value={groupTag}
             onChange={(e) => setGroupTag(e.target.value)}
           />
@@ -127,10 +127,10 @@ export default function RuleInputSection({
 
       {selectedRuleType === "slotRestriction" && (
         <div className="space-y-2">
-          <label className="block font-medium">Min Common Slots:</label>
+          <label className="block text-sm font-medium text-slate-300">Min Common Slots:</label>
           <input
             type="number"
-            className="border rounded p-1 w-full"
+            className="border border-slate-700 bg-slate-800 text-white rounded p-2 w-full"
             value={minCommonSlots}
             onChange={(e) => setMinCommonSlots(e.target.value)}
           />
@@ -139,10 +139,10 @@ export default function RuleInputSection({
 
       {selectedRuleType === "loadLimit" && (
         <div className="space-y-2">
-          <label className="block font-medium">Max Slots Per Phase:</label>
+          <label className="block text-sm font-medium text-slate-300">Max Slots Per Phase:</label>
           <input
             type="number"
-            className="border rounded p-1 w-full"
+            className="border border-slate-700 bg-slate-800 text-white rounded p-2 w-full"
             value={maxSlotsPerPhase}
             onChange={(e) => setMaxSlotsPerPhase(e.target.value)}
           />
@@ -152,17 +152,17 @@ export default function RuleInputSection({
       {selectedRuleType === "phaseWindow" && (
         <>
           <div className="space-y-2">
-            <label className="block font-medium">Task ID:</label>
+            <label className="block text-sm font-medium text-slate-300">Task ID:</label>
             <input
-              className="border rounded p-1 w-full"
+              className="border border-slate-700 bg-slate-800 text-white rounded p-2 w-full"
               value={phaseTaskId}
               onChange={(e) => setPhaseTaskId(e.target.value)}
             />
           </div>
           <div className="space-y-2">
-            <label className="block font-medium">Allowed Phases (comma separated):</label>
+            <label className="block text-sm font-medium text-slate-300">Allowed Phases (comma separated):</label>
             <input
-              className="border rounded p-1 w-full"
+              className="border border-slate-700 bg-slate-800 text-white rounded p-2 w-full"
               value={allowedPhases}
               onChange={(e) => setAllowedPhases(e.target.value)}
             />
@@ -171,21 +171,28 @@ export default function RuleInputSection({
       )}
 
       <Button onClick={handleAdd} className="bg-blue-600 text-white">
-        Add Rule
+        ➕ Add Rule
       </Button>
 
-      <div className="border-t pt-4">
-        <h2 className="font-semibold">Or describe a rule in English</h2>
+      <div className="border-t border-slate-700 pt-4">
+        <h2 className="font-semibold text-md text-slate-200 mb-1">
+          Or describe a rule in English:
+        </h2>
         <Textarea
           placeholder="e.g. 'Run tasks T1 and T3 together'"
           value={nlInput}
           onChange={(e) => setNlInput(e.target.value)}
           rows={2}
+          className="bg-slate-800 border border-slate-700 text-white"
         />
-        <Button disabled={isParsing || !nlInput} onClick={handleNL} className="mt-2">
-          {isParsing ? "Parsing…" : "Convert & Add Rule"}
+        <Button
+          disabled={isParsing || !nlInput}
+          onClick={handleNL}
+          className="mt-2 bg-purple-600 hover:bg-purple-700 text-white"
+        >
+          {isParsing ? "Parsing…" : "✨ Convert & Add Rule"}
         </Button>
-        {parseError && <p className="text-red-600 mt-1 text-sm">{parseError}</p>}
+        {parseError && <p className="text-red-500 mt-2 text-sm">{parseError}</p>}
       </div>
     </div>
   );

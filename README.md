@@ -73,8 +73,7 @@
 ---
 
 ## 📦 File Structure
-   ![App Preview](./public/screenshot-2025-06-29-215840.png)
-
+  ![FILE_STRUCTURE](./public/Screenshot 2025-06-29 215840.png)
 
 
     ## 🧑‍💻 Setup

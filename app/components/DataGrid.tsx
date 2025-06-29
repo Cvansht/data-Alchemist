@@ -68,33 +68,67 @@ DataGridProps<T>) {
   }, [searchQuery]);
 
   const filteredData = React.useMemo(() => {
-    if (!parsedFilters.length) return tableData;
-    return tableData.filter((row: any) =>
-      //@ts-ignore
-      parsedFilters.every(({ field, op, value }) => {
-        const cv = row[field];
-        if (cv == null) return false;
-        const num = Number(cv);
-        switch (op) {
-          case ">":
-            return num > value;
-          case "<":
-            return num < value;
-          case ">=":
-            return num >= value;
-          case "<=":
-            return num <= value;
-          case "=":
-            return cv.toString() === value.toString();
-          default:
-            return false;
-        }
-      })
-    );
-  }, [tableData, parsedFilters]);
+    // 1) If AI-parsed filters exist, use them
+    if (parsedFilters.length) {
+      return tableData.filter((row: any) =>
+        //@ts-ignore
+        parsedFilters.every(({ field, op, value }) => {
+          const cv = row[field];
+          console.log("parsedFilters:", parsedFilters);
+          console.log("conditions:", conditions);
+          if (cv == null) return false;
+          const num = Number(cv);
+          switch (op) {
+            case ">":
+              return num > value;
+            case "<":
+              return num < value;
+            case ">=":
+              return num >= value;
+            case "<=":
+              return num <= value;
+            case "=":
+              return cv.toString() === value.toString();
+            default:
+              return false;
+          }
+        })
+      );
+    }
+
+    // 2) Otherwise if simple conditions from searchQuery exist, use those
+    if (conditions.length) {
+      return tableData.filter((row: any) =>
+        conditions.every(({ field, op, value }) => {
+          const cv = row[field];
+          if (cv == null) return false;
+          const num = Number(cv);
+          switch (op) {
+            case ">":
+              return num > value;
+            case "<":
+              return num < value;
+            case ">=":
+              return num >= value;
+            case "<=":
+              return num <= value;
+            case "=":
+              return cv.toString() === value.toString();
+            default:
+              return false;
+          }
+        })
+      );
+    }
+
+    // 3) No filters at all → return the full dataset
+    return tableData;
+  }, [tableData, parsedFilters, conditions]);
 
   const handleSuggestFix = async (rowData: any, rowIndex: number) => {
-    const rowErrors = errors.filter((e: any) => e.rowIndex === rowIndex && e.entity === entity);
+    const rowErrors = errors.filter(
+      (e: any) => e.rowIndex === rowIndex && e.entity === entity
+    );
 
     const res = await fetch("/api/suggest-fix", {
       method: "POST",
@@ -124,47 +158,60 @@ DataGridProps<T>) {
 
   const table = useReactTable({
     data: filteredData,
-    columns: columns.map((col: any) => ({
-      ...col,
-      cell: (info: any) => {
-        const rowIndex = info.row.index;
-        const value = info.getValue();
-        const field = info.column.id;
+    columns: columns.map((col: any, colIndex: number) => {
+      // Choose a unique id: prefer the accessorKey, otherwise fall back to index
+      const safeId =
+        typeof col.accessorKey === "string" && col.accessorKey.trim() !== ""
+          ? col.accessorKey
+          : `col_${colIndex}`;
 
-        if (editingRow === rowIndex) {
-          return field === "PriorityLevel" ? (
-            <>
+      return {
+        id: safeId,
+        accessorKey: safeId,
+        header: col.header,
+        cell: (info: any) => {
+          const rowIndex = info.row.index;
+          const value = info.getValue();
+          const field = info.column.id;
+
+          if (editingRow === rowIndex) {
+            if (field === "PriorityLevel") {
+              return (
+                <>
+                  <input
+                    type="range"
+                    min={1}
+                    max={10}
+                    value={editedRow.PriorityLevel}
+                    onChange={(e) =>
+                      setEditedRow({
+                        ...editedRow,
+                        PriorityLevel: Number(e.target.value),
+                      })
+                    }
+                    className="w-full"
+                  />
+                  <div className="text-xs text-center text-slate-400">
+                    {editedRow.PriorityLevel}
+                  </div>
+                </>
+              );
+            }
+            return (
               <input
-                type="range"
-                min={1}
-                max={10}
-                value={editedRow.PriorityLevel}
+                className="border border-slate-600 bg-slate-900 text-white px-1 py-1 rounded w-full"
+                value={editedRow[field] ?? ""}
                 onChange={(e) =>
-                  setEditedRow({
-                    ...editedRow,
-                    PriorityLevel: Number(e.target.value),
-                  })
+                  setEditedRow({ ...editedRow, [field]: e.target.value })
                 }
-                className="w-full"
               />
-              <div className="text-xs text-center text-slate-400">
-                {editedRow.PriorityLevel}
-              </div>
-            </>
-          ) : (
-            <input
-              className="border border-slate-600 bg-slate-900 text-white px-1 py-1 rounded w-full"
-              value={editedRow[field] ?? ""}
-              onChange={(e) =>
-                setEditedRow({ ...editedRow, [field]: e.target.value })
-              }
-            />
-          );
-        }
+            );
+          }
 
-        return <span>{value}</span>;
-      },
-    })),
+          return <span>{value}</span>;
+        },
+      };
+    }),
     getCoreRowModel: getCoreRowModel(),
   });
 
@@ -253,10 +300,8 @@ DataGridProps<T>) {
                       }
                     />
                     <span className="text-center text-xs text-slate-400">
-                      
-                   
                       {/* {val} */}
-                      </span>
+                    </span>
                   </div>
                 ))}
               </div>
@@ -270,11 +315,19 @@ DataGridProps<T>) {
           {table.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <th className="border border-slate-700 px-3 py-2 bg-slate-800 text-slate-300" key={header.id}>
-                  {flexRender(header.column.columnDef.header, header.getContext())}
+                <th
+                  className="border border-slate-700 px-3 py-2 bg-slate-800 text-slate-300"
+                  key={header.id}
+                >
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
                 </th>
               ))}
-              <th className="border border-slate-700 px-3 py-2 bg-slate-800 text-slate-300">Actions</th>
+              <th className="border border-slate-700 px-3 py-2 bg-slate-800 text-slate-300">
+                Actions
+              </th>
             </tr>
           ))}
         </thead>

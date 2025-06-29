@@ -123,6 +123,34 @@ export default function UploadPage() {
     link.click();
     URL.revokeObjectURL(url);
   };
+  const downloadCSV = (data: any[], filename: string) => {
+    if (!data || data.length === 0) {
+      alert("No data to export!");
+      return;
+    }
+    const headers = Object.keys(data[0]);
+    const csvRows = data.map(row =>
+      headers
+        .map(field => {
+          const val = row[field] ?? "";
+          const escaped = String(val).replace(/"/g, '""');
+          return `"${escaped}"`;
+        })
+        .join(",")
+    );
+    const csvString = [headers.join(","), ...csvRows].join("\r\n");
+    const blob = new Blob([csvString], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+  
+
+
+
 
   const renderGrid = (label: string, data: any[]) => {
     if (!data || data.length === 0) return null;
@@ -166,6 +194,7 @@ export default function UploadPage() {
           errors={validationErrors}
           onDataUpdate={(upd: any) => handleDataUpdate(label, upd)}
           searchQuery={searchQueries[label]}
+          parsedFilters={parsedFilters}
         />
       </div>
     );
@@ -236,19 +265,19 @@ export default function UploadPage() {
         </div>
       )}
 
-      {Object.entries(datasets).length > 0 && (
-        <div className="mt-6">
-          <h2 className="text-lg font-semibold mb-2">Export Cleaned Data</h2>
-          <div className="flex gap-4 flex-wrap">
-            {Object.entries(datasets).map(([type, data]) => (
-              <Button
-                key={type}
-                onClick={() => downloadJSON(data, `${type}_cleaned.json`)}
-                className="bg-green-600 hover:bg-green-700 text-white"
-              >
-                Export {type.charAt(0).toUpperCase() + type.slice(1)}
-              </Button>
-            ))}
+{Object.entries(datasets).length > 0 && (
+  <div className="mt-6">
+    <h2 className="text-lg font-semibold mb-2">Export Cleaned Data</h2>
+    <div className="flex gap-4 flex-wrap">
+      {Object.entries(datasets).map(([type, data]) => (
+        <Button
+          key={type}
+          onClick={() => downloadCSV(data, `${type}_cleaned.csv`)}
+          className="bg-green-600 hover:bg-green-700 text-white"
+        >
+          Export {type.charAt(0).toUpperCase() + type.slice(1)}
+        </Button>
+      ))}
 
             {validationErrors.length > 0 && (
               <Button

@@ -73,4 +73,21 @@
 ---
 
 ## 📦 File Structure
+   ![App Preview](./public/screenshot-2025-06-29-215840.png)
 
+
+
+    ## 🧑‍💻 Setup
+
+```bash
+git clone https://github.com/your-org/data-alchemist.git
+cd data-alchemist
+
+# Install dependencies
+npm install
+
+# Create .env.local
+echo "GEMINI_API_KEY=your-google-api-key" > .env.local
+
+# Run the dev server
+npm run dev

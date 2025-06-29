@@ -73,7 +73,7 @@
 ---
 
 ## 📦 File Structure
-  ![FILE_STRUCTURE](./public/Screenshot 2025-06-29 215840.png)
+  ![FILE_STRUCTURE](./public/file_structure.png)
 
 
     ## 🧑‍💻 Setup

@@ -1,0 +1,4 @@
+WorkerID,WorkerName,Skills,AvailableSlots,MaxLoadPerPhase,WorkerGroup,QualificationLevel
+W001,Jane,"Python,SQL","[1,2,3]",2,Alpha,Senior
+W002,Mark,"JavaScript,React","[2,3,4]",3,Beta,Mid
+W003,Nina,Python,"[1,3,5]",1,Alpha,Junior

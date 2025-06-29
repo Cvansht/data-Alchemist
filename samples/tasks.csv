@@ -1,0 +1,4 @@
+TaskID,TaskName,Category,Duration,RequiredSkills,PreferredPhases,MaxConcurrent
+T01,Build Report,Analytics,2,Python,"[1,2]",2
+T02,Frontend Revamp,UI,3,React,"[2,3]",1
+T03,Data Sync,Integration,1,SQL,"[3,4]",2

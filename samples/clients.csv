@@ -1,0 +1,4 @@
+ClientID,ClientName,PriorityLevel,RequestedTaskIDs,GroupTag,AttributesJSON
+C001,Alice Inc,5,"T01,T02",Finance,"{""region"":""US""}"
+C002,Bob Corp,8,"T02,T03",Tech,"{""region"":""EU""}"
+C003,Charlie LLC,3,T01,Retail,"{""region"":""APAC""}"

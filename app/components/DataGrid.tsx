@@ -255,7 +255,7 @@ DataGridProps<T>) {
                     <span className="text-center text-xs text-slate-400">
                       
                    
-                      {val}
+                      {/* {val} */}
                       </span>
                   </div>
                 ))}
